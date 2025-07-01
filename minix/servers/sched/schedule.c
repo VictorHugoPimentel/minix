@@ -7,6 +7,7 @@
  *   do_nice		  Request to change the nice level on a proc
  *   init_scheduling      Called from main.c to set up/prepare scheduling
  */
+#include <stdlib.h>
 #include "sched.h"
 #include "schedproc.h"
 #include <assert.h>
@@ -369,4 +370,35 @@ void balance_queues(void)
 
 	if ((r = sys_setalarm(balance_timeout, 0)) != OK)
 		panic("sys_setalarm failed: %d", r);
+}
+
+/*===========================================================================*
+ *				Lottery_Pick				     *
+ *===========================================================================*/
+static int pick_lottery_winner(void) {
+	int total_tickets = 0;
+
+	// First, count total number of tickets
+	for (int i = 0; i < NR_PROCS; i++) {
+		if (schedproc[i].flags & IN_USE) {
+			total_tickets += schedproc[i].tickets;
+		}
+	}
+
+	if (total_tickets == 0) return -1;
+
+	// Pick a random number between 0 and total_tickets - 1
+	int winner_ticket = random() % total_tickets;
+
+	// Now find which process owns the winning ticket
+	int count = 0;
+	for (int i = 0; i < NR_PROCS; i++) {
+		if (!(schedproc[i].flags & IN_USE)) continue;
+		count += schedproc[i].tickets;
+		if (count > winner_ticket) {
+			return i;
+		}
+	}
+
+	return -1;  // should never reach here
 }

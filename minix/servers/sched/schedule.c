@@ -38,6 +38,8 @@ static int schedule_process(struct schedproc * rmp, unsigned flags);
 
 #define cpu_is_available(c)	(cpu_proc[c] >= 0)
 
+#define DEFAULT_TICKETS 10
+
 #define DEFAULT_USER_TIME_SLICE 200
 
 /* processes created by RS are sysytem processes */
@@ -161,6 +163,7 @@ int do_start_scheduling(message *m_ptr)
 	rmp->endpoint     = m_ptr->m_lsys_sched_scheduling_start.endpoint;
 	rmp->parent       = m_ptr->m_lsys_sched_scheduling_start.parent;
 	rmp->max_priority = m_ptr->m_lsys_sched_scheduling_start.maxprio;
+	rmp->tickets = DEFAULT_TICKETS;
 	if (rmp->max_priority >= NR_SCHED_QUEUES) {
 		return EINVAL;
 	}

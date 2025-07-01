@@ -89,25 +89,33 @@ static void pick_cpu(struct schedproc * proc)
 
 int do_noquantum(message *m_ptr)
 {
-	register struct schedproc *rmp;
-	int rv, proc_nr_n;
+    register struct schedproc *rmp;
+    int rv, proc_nr_n;
 
-	if (sched_isokendpt(m_ptr->m_source, &proc_nr_n) != OK) {
-		printf("SCHED: WARNING: got an invalid endpoint in OOQ msg %u.\n",
-		m_ptr->m_source);
-		return EBADEPT;
-	}
+    if (sched_isokendpt(m_ptr->m_source, &proc_nr_n) != OK) {
+        printf("SCHED: WARNING: got an invalid endpoint in OOQ msg %u.\n",
+        m_ptr->m_source);
+        return EBADEPT;
+    }
 
-	rmp = &schedproc[proc_nr_n];
-	if (rmp->priority < MIN_USER_Q) {
-		rmp->priority += 1; /* lower priority */
-	}
+    rmp = &schedproc[proc_nr_n];
+    if (rmp->priority < MIN_USER_Q) {
+        rmp->priority += 1; /* lower priority */
+    }
 
-	if ((rv = schedule_process_local(rmp)) != OK) {
-		return rv;
-	}
-	return OK;
+    // 🟡 Use lottery scheduling instead
+    int winner = pick_lottery_winner();
+    if (winner >= 0) {
+        rv = schedule_process_local(&schedproc[winner]);
+        if (rv != OK) return rv;
+    } else {
+        printf("SCHED: No process available to schedule via lottery.\n");
+    }
+
+    return OK;
 }
+
+
 
 /*===========================================================================*
  *				do_stop_scheduling			     *

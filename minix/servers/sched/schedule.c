@@ -46,6 +46,13 @@ static int schedule_process(struct schedproc * rmp, unsigned flags);
 /* processes created by RS are sysytem processes */
 #define is_system_proc(p)	((p)->parent == RS_PROC_NR)
 
+typedef enum {
+	ROUND_ROBIN,
+	LOTTERY
+} sched_mode_t;
+
+static sched_mode_t current_sched = LOTTERY;
+
 static unsigned cpu_proc[CONFIG_MAX_CPUS];
 
 static void pick_cpu(struct schedproc * proc)
@@ -103,14 +110,19 @@ int do_noquantum(message *m_ptr)
         rmp->priority += 1; /* lower priority */
     }
 
-    // 🟡 Use lottery scheduling instead
-    int winner = pick_lottery_winner();
-    if (winner >= 0) {
-        rv = schedule_process_local(&schedproc[winner]);
-        if (rv != OK) return rv;
-    } else {
-        printf("SCHED: No process available to schedule via lottery.\n");
-    }
+	if (current_sched == LOTTERY) {
+		int winner = pick_lottery_winner();
+		if (winner >= 0) {
+			rv = schedule_process_local(&schedproc[winner]);
+			if (rv != OK) return rv;
+		} else {
+			printf("SCHED: No process available to schedule via lottery.\n");
+		}
+	} else {
+		// fallback to round-robin: reschedule same process
+		if ((rv = schedule_process_local(rmp)) != OK)
+			return rv;
+	}
 
     return OK;
 }
